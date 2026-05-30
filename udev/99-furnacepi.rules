@@ -1,0 +1,3 @@
+# Adjust idVendor/idProduct after checking: python -m serial.tools.list_ports -v
+# Example stable name for the TEGAM USB-RS232 adapter:
+# SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", SYMLINK+="tegam3550", GROUP="dialout", MODE="0660"

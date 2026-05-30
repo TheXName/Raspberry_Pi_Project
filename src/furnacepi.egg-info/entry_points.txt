@@ -1,0 +1,3 @@
+[console_scripts]
+furnacepi = furnacepi.main:main
+furnacepi-preflight = furnacepi.preflight:main

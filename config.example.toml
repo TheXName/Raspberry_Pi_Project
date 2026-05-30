@@ -1,0 +1,54 @@
+[agilent]
+enabled = true
+mock = true
+resource = "TCPIP0::192.168.1.50::inst0::INSTR"
+temp_channels = [101]
+tc_type = "K"
+timeout_ms = 3000
+
+[tegam]
+enabled = true
+mock = true
+port = "/dev/tegam3550"
+baudrate = 9600
+bytesize = 8
+parity = "N"
+stopbits = 1
+timeout_s = 1.0
+write_timeout_s = 1.0
+terminator = "\r"
+measurement_command = "O1"
+
+[heater]
+mock = true
+gpio_pin = 17
+active_high = true
+cycle_s = 5.0
+
+[safety]
+max_temp_c = 900.0
+sensor_timeout_s = 3.0
+require_time_sync = false
+max_loop_delay_s = 5.0
+
+[logging]
+results_dir = "Results"
+flush_every_lines = 1
+strict_dt = false
+
+[profile]
+start_c = 25.0
+
+[[profile.segments]]
+target_c = 120.0
+ramp_c_per_min = 5.0
+hold_s = 300.0
+
+[[profile.segments]]
+target_c = 25.0
+ramp_c_per_min = 10.0
+hold_s = 0.0
+
+[control]
+loop_period_s = 1.0
+proportional_band_c = 20.0
