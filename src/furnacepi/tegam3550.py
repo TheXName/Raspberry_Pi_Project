@@ -37,6 +37,8 @@ class Tegam3550:
             timeout=self.cfg.timeout_s,
             write_timeout=self.cfg.write_timeout_s,
         )
+        for command in self.cfg.startup_commands:
+            self.send_cmd(command)
 
     def send_cmd(self, command: str) -> None:
         if self.cfg.mock or not self.cfg.enabled:
@@ -59,7 +61,8 @@ class Tegam3550:
         return line.decode("ascii", errors="replace").strip()
 
     def measure_once(self) -> TegamReading:
-        self.send_cmd(self.cfg.measurement_command)
+        if self.cfg.measurement_command:
+            self.send_cmd(self.cfg.measurement_command)
         return parse_tegam_response(self.read_line())
 
     def close(self) -> None:

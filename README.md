@@ -2,56 +2,129 @@
 
 Python-проект для переноса управления печью с внешнего ПК/MATLAB на Raspberry Pi.
 
-## Что реализовано
-
-- Чтение Agilent 34972A через PyVISA/PyVISA-py, с mock-режимом для разработки без прибора.
-- Чтение TEGAM 3550 через RS-232/pySerial, с терпимым парсером числовых ответов.
-- Управление печью через GPIO и SSR в режиме time-proportioning, безопасно OFF на старте и при завершении.
-- Температурная программа ramp/soak из `config.example.toml`.
-- Программные interlocks: перегрев, таймаут датчика, слишком длинная задержка control loop.
-- Логирование в `Results/Data-YYYY-MM-DD_HHMMSS.dt` и sidecar JSON с конфигурацией запуска.
-- `systemd` unit и заготовка `udev`-правил для Raspberry Pi.
-
-## Быстрый запуск на ПК без железа
+По умолчанию `python main.py` теперь запускает `config.real.toml`. Это реальный конфиг для Raspberry Pi. Для безопасной проверки без железа запускайте явно:
 
 ```bash
-python -m pip install -e .
-python main.py --config config.example.toml --dry-run-seconds 5
+python main.py --config config.example.toml --dry-run-seconds 10
 ```
 
-После запуска появится папка `Results/` с `.dt`-файлом.
+## Что реализовано
 
-## Raspberry Pi deployment
+- Agilent 34972A через PyVISA/PyVISA-py.
+- TEGAM 3550 через RS-232/pySerial.
+- GPIO-управление SSR/relay driver в режиме медленного time-proportioning.
+- Температурная программа ramp/soak.
+- Safety interlocks: перегрев, таймаут датчика, слишком длинная задержка control loop.
+- Запись логов `Results/Data-YYYY-MM-DD_HHMMSS.dt`.
+- `systemd` unit и заготовка `udev`-правил.
+
+## Важные конфиги
+
+- `config.example.toml` - безопасная симуляция, все `mock = true`.
+- `config.real.toml` - реальный запуск, все основные `mock = false`.
+
+В `config.real.toml` есть словацкие комментарии, где вводить:
+
+- IP/VISA адрес Agilent;
+- serial port TEGAM;
+- GPIO pin SSR/relay driver;
+- температурные лимиты;
+- температурную программу.
+
+## Что сделать после переноса на Raspberry Pi
+
+1. Установить системные пакеты:
 
 ```bash
 sudo apt update
 sudo apt install -y python3-venv python3-pip libusb-1.0-0
-sudo mkdir -p /opt/furnacepi /etc/furnacepi /opt/furnacepi/Results
-python3 -m venv /opt/furnacepi/.venv
-/opt/furnacepi/.venv/bin/pip install pyvisa pyvisa-py pyserial pyusb gpiozero
 ```
 
-Скопируйте проект в `/opt/furnacepi`, а рабочий конфиг в `/etc/furnacepi/config.toml`.
+2. Скопировать проект, например в `/opt/furnacepi`.
 
-Для реального запуска поменяйте в конфиге:
-
-- `[agilent].mock = false`
-- `[tegam].mock = false`
-- `[heater].mock = false`
-- `[agilent].resource` на VISA-адрес 34972A, например `TCPIP0::192.168.1.50::inst0::INSTR`
-- `[tegam].port` на стабильный путь адаптера, например `/dev/tegam3550`
-- `[tegam].measurement_command` и `terminator` на точные значения из старого MATLAB-кода/мануала TEGAM
-
-## Проверки перед печью
+3. Создать окружение и установить зависимости:
 
 ```bash
-/opt/furnacepi/.venv/bin/python -m serial.tools.list_ports -v
-/opt/furnacepi/.venv/bin/pyvisa-info
-/opt/furnacepi/.venv/bin/furnacepi-preflight --config /etc/furnacepi/config.toml --list-ports
+cd /opt/furnacepi
+python3 -m venv .venv
+.venv/bin/pip install -e .
 ```
 
-Сначала проверьте Agilent `*IDN?`, затем TEGAM command/response, затем SSR на лампе или dummy load. Только после этого подключайте печь через аппаратный interlock/термостат.
+4. Проверить serial adapter TEGAM:
 
-## Важное по безопасности
+```bash
+.venv/bin/python -m serial.tools.list_ports -v
+```
 
-Программа всегда выключает нагреватель при exception, SIGTERM/SIGINT и штатном завершении, но software safety не заменяет аппаратную защиту. Силовая цепь печи должна иметь SSR/контактор, предохранитель, заземление и независимый overtemperature cut-off.
+Если видите `/dev/ttyUSB0`, `/dev/ttyUSB1` и т.п., запишите правильный порт в `config.real.toml`. Лучше позже сделать стабильный alias `/dev/tegam3550` через `udev/99-furnacepi.rules`.
+
+5. Проверить Agilent:
+
+```bash
+.venv/bin/pyvisa-info
+.venv/bin/furnacepi-preflight --config config.real.toml --skip-agilent-idn
+```
+
+Когда IP Agilent точно настроен, запустите уже без `--skip-agilent-idn`:
+
+```bash
+.venv/bin/furnacepi-preflight --config config.real.toml --list-ports
+```
+
+6. Первый запуск делать без печи:
+
+```bash
+python main.py --config config.example.toml --dry-run-seconds 10
+```
+
+7. Потом проверить реальные приборы, но оставить нагрев отключенным физически или через `heater.mock = true`.
+
+8. Проверить SSR/relay driver на лампе или dummy load, не на печи.
+
+9. Только после этого подключать печь через аппаратный interlock/термостат и запускать низкотемпературный короткий профиль.
+
+## Про TEGAM команды
+
+Точные команды из старого MATLAB-проекта пока неизвестны. В `config.real.toml` поставлена наиболее вероятная стартовая последовательность для TEGAM 3550 RS-232:
+
+```toml
+startup_commands = ["E3", "REN", "O1"]
+measurement_command = "T0"
+```
+
+По мануалу 3550: `REN` включает вывод измерительных данных, `O1` выбирает RS-232 output, `E3` соответствует запуску измерения командой, а `T0` является trigger command. Но это всё равно надо проверить на вашем приборе. Если старый MATLAB-код посылал другие строки, замените их в `config.real.toml`.
+
+Источник для проверки: [TEGAM 3550 manual на ManualsLib](https://www.manualslib.com/manual/1356020/Tegam-3550.html), раздел RS-232C command summary.
+
+## Про реле/SSR
+
+Код учитывает реле как внешний исполнительный элемент, подключенный к GPIO Raspberry Pi:
+
+```text
+Raspberry Pi GPIO -> driver/opto -> SSR или relay -> печь
+```
+
+В конфиге это блок:
+
+```toml
+[heater]
+gpio_pin = 17
+active_high = true
+cycle_s = 5.0
+```
+
+Код не управляет внутренними аппаратными реле Agilent/TEGAM и не заменяет аппаратный аварийный термостат. Software safety только дополнение. Силовая часть печи должна иметь независимый аппаратный cut-off.
+
+## Запуск как service
+
+Шаблон лежит в `systemd/furnacepi.service`.
+
+```bash
+sudo cp systemd/furnacepi.service /etc/systemd/system/furnacepi.service
+sudo systemctl daemon-reload
+sudo systemctl enable furnacepi.service
+sudo systemctl start furnacepi.service
+sudo journalctl -u furnacepi.service -f
+```
+
+Перед `systemctl start` обязательно проверьте `config.real.toml`.

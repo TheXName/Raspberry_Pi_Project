@@ -9,7 +9,9 @@ import tomllib
 class AgilentConfig:
     enabled: bool = True
     mock: bool = False
+    # Sem zadaj VISA adres Agilent 34972A, najcastejsie TCPIP0::<IP>::inst0::INSTR.
     resource: str = "TCPIP0::192.168.1.50::inst0::INSTR"
+    # Sem zadaj kanaly, na ktorych su pripojene teplotne senzory pece.
     temp_channels: list[int] = field(default_factory=lambda: [101])
     tc_type: str = "K"
     timeout_ms: int = 3000
@@ -19,6 +21,7 @@ class AgilentConfig:
 class TegamConfig:
     enabled: bool = True
     mock: bool = False
+    # Sem zadaj stabilny Linux port USB-RS232 adaptera, napr. /dev/tegam3550.
     port: str = "/dev/tegam3550"
     baudrate: int = 9600
     bytesize: int = 8
@@ -27,12 +30,16 @@ class TegamConfig:
     timeout_s: float = 1.0
     write_timeout_s: float = 1.0
     terminator: str = "\r"
-    measurement_command: str = "O1"
+    # Pravdepodobne uvodne prikazy pre TEGAM 3550 RS-232; over ich so starym MATLAB kodom.
+    startup_commands: list[str] = field(default_factory=lambda: ["E3", "REN", "O1"])
+    # Pravdepodobny prikaz merania pri rezime E3 je T0; over ho so starym MATLAB kodom.
+    measurement_command: str = "T0"
 
 
 @dataclass(frozen=True)
 class HeaterConfig:
     mock: bool = True
+    # Sem zadaj BCM cislo GPIO pinu, ktory ovlada SSR/rele driver.
     gpio_pin: int = 17
     active_high: bool = True
     cycle_s: float = 5.0
@@ -40,6 +47,7 @@ class HeaterConfig:
 
 @dataclass(frozen=True)
 class SafetyConfig:
+    # Sem zadaj maximalnu dovolenu teplotu pece v stupnoch C.
     max_temp_c: float = 900.0
     sensor_timeout_s: float = 3.0
     require_time_sync: bool = False
@@ -62,6 +70,7 @@ class SegmentConfig:
 
 @dataclass(frozen=True)
 class ProfileConfig:
+    # Sem zadaj startovaciu teplotu programu v stupnoch C.
     start_c: float = 25.0
     segments: list[SegmentConfig] = field(default_factory=list)
 

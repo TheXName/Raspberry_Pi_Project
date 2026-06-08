@@ -34,7 +34,7 @@ def _stop_handler(signum: int, frame: object) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the FurnacePi experiment controller")
-    parser.add_argument("--config", default="config.example.toml", help="Path to config TOML")
+    parser.add_argument("--config", default="config.real.toml", help="Path to config TOML")
     parser.add_argument("--dry-run-seconds", type=float, default=None, help="Stop automatically after N seconds")
     return parser
 

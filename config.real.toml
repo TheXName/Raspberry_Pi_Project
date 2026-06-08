@@ -1,0 +1,83 @@
+# REALNY KONFIG PRE RASPBERRY PI.
+# Pozor: tento subor je predvoleny pri `python main.py`.
+# Ked je mock = false, program sa pokusi otvorit skutocne pristroje a GPIO.
+
+[agilent]
+enabled = true
+mock = false
+# Sem zadaj skutocny VISA/LAN adres Agilent 34972A.
+# Priklad pre LAN: "TCPIP0::192.168.1.50::inst0::INSTR"
+resource = "TCPIP0::192.168.1.50::inst0::INSTR"
+# Sem zadaj kanaly Agilent, na ktorych citas teplotu pece.
+# 101 znamena slot 1, kanal 01.
+temp_channels = [101]
+# Sem zadaj typ termočlánku: K, J, T, N podla zapojenia.
+tc_type = "K"
+timeout_ms = 3000
+
+[tegam]
+enabled = true
+mock = false
+# Sem zadaj Linux ID portu USB-RS232 adaptera.
+# Najprv zisti port prikazom: python -m serial.tools.list_ports -v
+# Lepsie je vytvorit udev alias /dev/tegam3550 nez pouzivat nahodne /dev/ttyUSB0.
+port = "/dev/tegam3550"
+baudrate = 9600
+bytesize = 8
+parity = "N"
+stopbits = 1
+timeout_s = 1.0
+write_timeout_s = 1.0
+terminator = "\r"
+# Najpravdepodobnejsia inicializacia TEGAM 3550 podla manualu/prikladu:
+# E3 = meranie startuje prikazom, REN = vystup meracich dat, O1 = RS-232 output.
+# Toto treba potvrdit so starym MATLAB projektom alebo bench testom.
+startup_commands = ["E3", "REN", "O1"]
+# Najpravdepodobnejsi prikaz pre jeden trigger/meranie v rezime E3 je T0.
+# Ak MATLAB posielal iny prikaz, zmen prave tento riadok.
+measurement_command = "T0"
+
+[heater]
+mock = false
+# Sem zadaj BCM cislo GPIO pinu, nie fyzicke cislo pinu na konektore.
+# GPIO17 je fyzicky pin 11 na 40-pin headeri.
+gpio_pin = 17
+# true znamena: HIGH zapne SSR/rele driver, LOW vypne.
+active_high = true
+# Perioda pomaleho SSR riadenia. Pre pec je 2-10 s normalne.
+cycle_s = 5.0
+
+[safety]
+# Sem zadaj tvrdy softverovy limit teploty pece v stupnoch C.
+# Nastav nizsie ako realny nebezpecny limit zariadenia.
+max_temp_c = 900.0
+sensor_timeout_s = 3.0
+require_time_sync = false
+max_loop_delay_s = 5.0
+
+[logging]
+results_dir = "Results"
+flush_every_lines = 1
+# true odstrani hlavicku a state stlpec, ak stary MATLAB parser vyzaduje prisne data.
+strict_dt = false
+
+[profile]
+# Sem zadaj startovaciu teplotu programu v stupnoch C.
+start_c = 25.0
+
+[[profile.segments]]
+# Sem zadaj cielovu teplotu segmentu v stupnoch C.
+target_c = 120.0
+# Sem zadaj rychlost nahrievania v C za minutu.
+ramp_c_per_min = 5.0
+# Sem zadaj cas drzania cielovej teploty v sekundach.
+hold_s = 300.0
+
+[[profile.segments]]
+target_c = 25.0
+ramp_c_per_min = 10.0
+hold_s = 0.0
+
+[control]
+loop_period_s = 1.0
+proportional_band_c = 20.0

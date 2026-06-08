@@ -17,7 +17,8 @@ stopbits = 1
 timeout_s = 1.0
 write_timeout_s = 1.0
 terminator = "\r"
-measurement_command = "O1"
+startup_commands = []
+measurement_command = "T0"
 
 [heater]
 mock = true
